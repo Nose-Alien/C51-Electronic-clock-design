@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CopilotDiffPersistence">
+    <option name="pendingDiffs">
+      <map>
+        <entry key="/Delay (snapshot).c">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="/Delay (snapshot).c" />
+              <option name="originalContent" value="/**&#10;  * @file   Delay.c&#10;  * @brief  软件延时&#10;  * @author SleetGit&#10;  * @date   2026/4/29.&#10;  */&#10;&#10;#include &quot;mcs51/8052.h&quot;&#10;&#10;void Delay(unsigned int xms)&#10;{&#10;&#9;unsigned char i, j;&#10;&#9;while(xms--)&#10;&#9;{&#10;&#9;&#9;i = 2;&#10;&#9;&#9;j = 239;&#10;&#9;&#9;do&#10;&#9;&#9;{&#10;&#9;&#9;&#9;while (--j);&#10;&#9;&#9;} while (--i);&#10;&#9;}&#10;}&#10;&#10;" />
+              <option name="updatedContent" value="#include &quot;mcs51/8052.h&quot;&#10;&#10;/* Delay.c&#10; * 软件阻塞延时实现。&#10; * Delay(xms)：阻塞近似 xms 毫秒（与编译器与晶振频率相关）。&#10; */&#10;&#10;void Delay(unsigned int xms)&#10;{&#10;&#9;unsigned char i, j;&#10;&#9;while(xms--)&#10;&#9;{&#10;&#9;&#9;i = 2;&#10;&#9;&#9;j = 239;&#10;&#9;&#9;do&#10;&#9;&#9;{&#10;&#9;&#9;&#9;while (--j);&#10;&#9;&#9;} while (--i);&#10;&#9;}&#10;}" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+        <entry key="/LCD1602 (snapshot).h">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="/LCD1602 (snapshot).h" />
+              <option name="originalContent" value="#ifndef __LCD1602_H__&#10;#define __LCD1602_H__&#10;&#10;&#10;//用户调用函数：&#10;void LCD_Init(void);//初始化&#10;void LCD_Clear(void);//清屏&#10;void LCD_SetCursor(unsigned char Line,unsigned char Column);//显示光标&#10;void LCD_ShowChar(unsigned char Line,unsigned char Column,char Char);//显示一个字符&#10;void LCD_ShowString(unsigned char Line,unsigned char Column,char *String);//显示一个字符串&#10;void LCD_ShowNum(unsigned char Line,unsigned char Column,unsigned int Number,unsigned char Length);//显示十进制数字&#10;void LCD_ShowSignedNum(unsigned char Line,unsigned char Column,int Number,unsigned char Length);//显示有符号十进制数字&#10;void LCD_ShowHexNum(unsigned char Line,unsigned char Column,unsigned int Number,unsigned char Length);//显示十六进制数字&#10;void LCD_ShowBinNum(unsigned char Line,unsigned char Column,unsigned int Number,unsigned char Length);//显示二进制数字&#10;&#10;#endif&#10;" />
+              <option name="updatedContent" value="/* LCD1602.h&#10; * LCD1602 显示驱动接口（8-bit 并口模式）。&#10; * 提供初始化、清屏、设置光标与各种格式的显示函数。&#10; */&#10;&#10;#ifndef __LCD1602_H__&#10;#define __LCD1602_H__&#10;&#10;/* 用户接口 */&#10;void LCD_Init(void);                                 /* 初始化 LCD */&#10;void LCD_Clear(void);                                /* 清屏 */&#10;void LCD_SetCursor(unsigned char Line,unsigned char Column); /* 设置光标位置：Line=1~2, Column=1~16 */&#10;void LCD_ShowChar(unsigned char Line,unsigned char Column,char Char); /* 在指定位置显示单字符 */&#10;void LCD_ShowString(unsigned char Line,unsigned char Column,char *String); /* 在指定位置显示字符串 */&#10;void LCD_ShowNum(unsigned char Line,unsigned char Column,unsigned int Number,unsigned char Length); /* 显示无符号十进制数 */&#10;void LCD_ShowSignedNum(unsigned char Line,unsigned char Column,int Number,unsigned char Length); /* 显示有符号十进制数 */&#10;void LCD_ShowHexNum(unsigned char Line,unsigned char Column,unsigned int Number,unsigned char Length); /* 显示十六进制数 */&#10;void LCD_ShowBinNum(unsigned char Line,unsigned char Column,unsigned int Number,unsigned char Length); /* 显示二进制数 */&#10;&#10;#endif" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+        <entry key="/MatrixKey (snapshot).h">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="/MatrixKey (snapshot).h" />
+              <option name="originalContent" value="#ifndef __MATRIXKEY_H__&#10;#define __MATRIXKEY_H__&#10;&#10;unsigned char GetKey(void);&#10;&#10;#endif&#10;" />
+              <option name="updatedContent" value="/* MatrixKey.h&#10; * 按键读取接口。&#10; * GetKey() 返回按键编号：0 表示无键，1..n 表示对应按键。&#10; */&#10;&#10;#ifndef __MATRIXKEY_H__&#10;#define __MATRIXKEY_H__&#10;&#10;unsigned char GetKey(void);&#10;&#10;#endif" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>
