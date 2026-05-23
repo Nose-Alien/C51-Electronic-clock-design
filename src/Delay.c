@@ -1,11 +1,9 @@
-/**
-  * @file   Delay.c
-  * @brief  软件延时
-  * @author SleetGit
-  * @date   2026/4/29.
-  */
-
 #include "mcs51/8052.h"
+
+/* Delay.c
+ * 软件阻塞延时实现。
+ * Delay(xms)：阻塞近似 xms 毫秒（与编译器与晶振频率相关）。
+ */
 
 void Delay(unsigned int xms)
 {
@@ -20,4 +18,3 @@ void Delay(unsigned int xms)
 		} while (--i);
 	}
 }
-

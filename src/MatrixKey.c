@@ -1,13 +1,12 @@
 #include "mcs51/8052.h"
 #include "../include/Delay.h"
 
-/**
-  * @brief  矩阵键盘读取按键键码
-  * @param  无
-  * @retval KeyNumber 按下按键的键码值
-			如果按键按下不放，程序会停留在此函数，松手的一瞬间，返回按键键码，没有按键按下时，返回0
-  */
-unsigned char MatrixKey(void)
+/* MatrixKey.c
+ * 简单按键读取（轮询并消抖）。
+ * GetKey() 返回按键编号：0 表示无键，1..7 对应 P1_0..P1_6。
+ */
+
+unsigned char GetKey(void)
 {
 	unsigned char KeyNumber=0;
 
