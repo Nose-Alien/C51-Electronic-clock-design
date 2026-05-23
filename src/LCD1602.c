@@ -100,6 +100,8 @@ void LCD_ShowChar(unsigned char Line,unsigned char Column,char Char)
 	LCD_WriteData(Char);
 }
 
+
+
 /**
   * @brief  在LCD1602指定位置开始显示所给字符串
   * @param  Line 起始行位置，范围：1~2
@@ -115,6 +117,12 @@ void LCD_ShowString(unsigned char Line,unsigned char Column,char *String)
 	{
 		LCD_WriteData(String[i]);
 	}
+}
+
+void LCD_Clear(void)
+{
+	LCD_ShowString(1, 1, "                ");
+	LCD_ShowString(2, 1, "                ");
 }
 
 /**

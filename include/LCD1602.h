@@ -4,6 +4,7 @@
 
 //用户调用函数：
 void LCD_Init(void);//初始化
+void LCD_Clear(void);//清屏
 void LCD_SetCursor(unsigned char Line,unsigned char Column);//显示光标
 void LCD_ShowChar(unsigned char Line,unsigned char Column,char Char);//显示一个字符
 void LCD_ShowString(unsigned char Line,unsigned char Column,char *String);//显示一个字符串
