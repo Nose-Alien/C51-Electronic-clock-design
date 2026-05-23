@@ -7,23 +7,23 @@
 int KeyValue = 0;
 static unsigned int TimeCount = 0;
 
-// 时间数据 (核心)
+// 时间数据
 static unsigned int TimeSec = 0;
 static unsigned int TimeMinute = 0;
-static unsigned int RealHour = 12;     // 底层真实时间 (24小时制 0-23)
-static unsigned int TimeHour = 12;     // 显示用的时间 (随 12/24 制变化)
+static unsigned int RealHour = 12;     // 底层真实时间 (24小时制 0-23)，这是核心数据
+static unsigned int TimeHour = 12;      // 显示用的时间 (随 12/24 制变化)
 static unsigned char TimeHour_flag = 0; // 0: 24小时制, 1: 12小时制
+
 static unsigned int TimeDay = 30;
 static unsigned int TimeMonth = 5;
 static unsigned int TimeYear = 2026;
 
-// 闹钟数据
-static unsigned char AlarmOnOff = 1;   // 闹钟开关(0关，1开)
-static unsigned int AlarmHour = 12;    // 闹钟时 (24h制)
-static unsigned int AlarmMinute = 1;   // 闹钟分
-static unsigned char AlarmFlag = 3;   // 闹钟光标标志位 (1=开关, 2=分, 3=时)
+static unsigned char AlarmOnOff = 0;    // 闹钟开关(0关，1开)
+static unsigned int AlarmHour = 12;     // 闹钟时 (24h制)
+static unsigned int AlarmMinute = 1;  // 闹钟分
+static unsigned char AlarmFlag = 3;    // 闹钟光标标志位 (1=开关, 2=分, 3=时)
 
-// 闹钟触发状态
+// --- 新增：闹钟触发状态 ---
 static unsigned char AlarmTriggered = 0; // 1表示闹钟正在响
 
 // 设置用的临时变量
@@ -33,10 +33,9 @@ static unsigned int AlterRealHour = 12; // 对应 RealHour
 static unsigned int AlterDay = 30;
 static unsigned int AlterMonth = 5;
 static unsigned int AlterYear = 2026;
-static unsigned int AlterFlag = 1;      // 1:Sec, 2:Min, 3:Hour, 4:Day, 5:Month, 6:Year
 
-// 菜单界面标志
-static unsigned char Menu_flag = 0;    // 0:主界面, 1:设置界面, 2:闹钟界面
+static unsigned int AlterFlag = 1; // 1:Sec, 2:Min, 3:Hour, 4:Day, 5:Month, 6:Year
+static unsigned char Menu_flag = 0; // 0:主界面, 1:设置界面
 
 // --- 函数声明 ---
 void buzzer(int state);
@@ -55,30 +54,20 @@ void AlarmState(void);
 // --- 中断函数声明 ---
 static void Timer0_Rountine(void) __interrupt (1);
 
-/**
- * @brief 主函数
- * 初始化硬件并进入主循环，处理按键、闹钟状态和界面显示
- */
+// --- 主函数 ---
 int main(void) {
     buzzer(0);
     LCD_Init();
     Timer0Init();
 
     while(1) {
-        // 1. 读取按键值
         KeyValue = GetKey();
-
-        // 2. 检查闹钟是否触发
         AlarmState();
-
-        // 3. 处理按键逻辑
         KeyLogic(KeyValue);
-
-        // 4. 根据当前菜单标志显示不同界面
         switch (Menu_flag) {
             case 0: // 主界面
                 Main_ShowData();
-                Calendar(); // 只有主界面才进行时间进位计算
+                Calendar();   // 只有主界面才进行时间进位计算
                 break;
             case 1: // 设置界面
                 AlterTime_ShowData();
@@ -90,142 +79,149 @@ int main(void) {
     }
 }
 
-/**
- * @brief 闹钟状态检查函数
- * 检查当前时间是否等于闹钟时间，并控制蜂鸣器
- */
-void AlarmState(void) {
+void AlarmState(void)
+{
     if (AlarmOnOff) {
-        // 如果闹钟开启且时间匹配
         if (RealHour == AlarmHour && TimeMinute == AlarmMinute) {
-            AlarmTriggered = 1; // 设置触发标志
-            buzzer(1);          // 开启蜂鸣器
+            AlarmTriggered = 1; // 设置闹钟触发状态
+            buzzer(1); // 开启蜂鸣器
         }
     } else {
-        buzzer(0); // 闹钟关闭则关闭蜂鸣器
+        buzzer(0); // 关闭蜂鸣器
     }
 }
 
-/**
- * @brief 进入设置界面时的数据同步
- * 将真实运行的时间数据复制到修改用的临时变量中
- */
+// --- 数据同步函数 ---
+// 进入设置界面时，把真实时间复制给 Alter 变量
 void SwopAlter(void) {
     AlterSec = TimeSec;
     AlterMinute = TimeMinute;
-    AlterRealHour = RealHour;
+    AlterRealHour = RealHour; // 同步底层24小时制数据
     AlterDay = TimeDay;
     AlterMonth = TimeMonth;
     AlterYear = TimeYear;
 }
 
-/**
- * @brief 退出设置界面时的数据写回
- * 将修改后的临时变量写回真实运行的时间数据
- */
+// 退出设置界面时，把 Alter 变量写回真实时间
 void AlterSwop(void) {
     TimeSec = AlterSec;
     TimeMinute = AlterMinute;
-    RealHour = AlterRealHour;
+    RealHour = AlterRealHour; // 写回底层24小时制数据
     TimeDay = AlterDay;
     TimeMonth = AlterMonth;
     TimeYear = AlterYear;
 }
 
-/**
- * @brief 设置界面显示函数
- * 显示可编辑的时间日期，并根据光标位置闪烁
- */
+// --- 显示函数 ---
 void AlterTime_ShowData(void) {
     LCD_ShowString(2, 1, "Alter");
 
-    // 计算显示用的小时（处理12/24小时制转换）
+    // 1. 计算显示用的小时 (处理 12/24 小时制转换)
     unsigned int DisplayHour;
     if (TimeHour_flag == 0) {
-        DisplayHour = AlterRealHour;
+        DisplayHour = AlterRealHour; // 24小时制直接显示
     } else {
-        if (AlterRealHour == 0) DisplayHour = 12;
-        else if (AlterRealHour > 12) DisplayHour = AlterRealHour - 12;
-        else DisplayHour = AlterRealHour;
+        if (AlterRealHour == 0) DisplayHour = 12;      // 0点 -> 12 AM
+        else if (AlterRealHour > 12) DisplayHour = AlterRealHour - 12; // 13-23 -> 1-11
+        else DisplayHour = AlterRealHour;             // 1-12 -> 1-12
     }
 
-    // 根据 AlterFlag 控制闪烁
+    // 2. 闪烁逻辑 (根据 AlterFlag)
     switch (AlterFlag) {
         case 1: BlinkField(2, 15, AlterSec, 2); break;
         case 2: BlinkField(2, 12, AlterMinute, 2); break;
-        case 3: BlinkField(2, 9, DisplayHour, 2); break;
+        case 3: BlinkField(2, 9, DisplayHour, 2); break; // 显示转换后的小时
         case 4: BlinkField(1, 9, AlterDay, 2); break;
         case 5: BlinkField(1, 6, AlterMonth, 2); break;
         case 6: BlinkField(1, 1, AlterYear, 4); break;
     }
 
-    // 显示非闪烁部分的固定数据
+    // 3. 非闪烁字段的稳定显示
     if (AlterFlag != 1) LCD_ShowNum(2, 15, AlterSec, 2);
     if (AlterFlag != 2) LCD_ShowNum(2, 12, AlterMinute, 2);
-    if (AlterFlag != 3) LCD_ShowNum(2, 9, DisplayHour, 2);
+    if (AlterFlag != 3) LCD_ShowNum(2, 9, DisplayHour, 2); // 注意这里
     if (AlterFlag != 4) LCD_ShowNum(1, 9, AlterDay, 2);
     if (AlterFlag != 5) LCD_ShowNum(1, 6, AlterMonth, 2);
     if (AlterFlag != 6) LCD_ShowNum(1, 1, AlterYear, 4);
 
-    // 显示固定分隔符
+    // 4. 固定分隔符
     LCD_ShowChar(2, 14, ':');
     LCD_ShowChar(2, 11, ':');
     LCD_ShowChar(1, 8, '-');
     LCD_ShowChar(1, 5, '-');
 }
 
-/**
- * @brief 闹钟设置界面显示函数
- * 显示闹钟设置项，并根据光标位置闪烁
- */
-void SetAlarm_ShowData(void) {
+void SetAlarm_ShowData(void)
+{
     unsigned int DisplayHour;
 
-    // 计算闹钟显示小时（处理12/24小时制转换）
+    // --- 1. 计算显示小时 (12/24小时制转换) ---
+    // 注意：这里必须使用 AlarmHour (闹钟设定值)，而不是 RealHour (当前时间)
     if (TimeHour_flag == 0) {
-        DisplayHour = AlarmHour;
+        DisplayHour = AlarmHour; // 24小时制
     } else {
-        if (AlarmHour == 0) DisplayHour = 12;
-        else if (AlarmHour > 12) DisplayHour = AlarmHour - 12;
-        else DisplayHour = AlarmHour;
+        // 12小时制转换
+        if (AlarmHour == 0) DisplayHour = 12;      // 0点显示12
+        else if (AlarmHour > 12) DisplayHour = AlarmHour - 12; // 下午减12
+        else DisplayHour = AlarmHour;              // 上午直接显示
     }
 
-    // 显示固定标题
+    // --- 2. 显示固定内容 ---
     LCD_ShowString(1, 5, "SetAlarm");
-    LCD_ShowChar(2, 6, ':');
+    LCD_ShowChar(2, 6, ':'); // 固定冒号
 
-    // 根据 AlarmFlag 控制闪烁逻辑
+    // --- 3. 闪烁逻辑核心 ---
+    // 根据 AlarmFlag 的值决定哪个字段闪烁
+    // 注意：位置参数微调为 2,5 (小时) 和 2,7 (分钟) 以对齐格式 HH:MM
+
     if (AlarmFlag == 3) {
-        // 小时闪烁
+        // 小时闪烁 (位置 2,5)
         BlinkField(2, 4, DisplayHour, 2);
+        // 非闪烁部分强制显示（防止光标移走后残留）
         LCD_ShowNum(2, 7, AlarmMinute, 2);
-        LCD_ShowString(2, 11, AlarmOnOff ? "ON " : "OFF");
-    } else if (AlarmFlag == 2) {
-        // 分钟闪烁
-        BlinkField(2, 7, AlarmMinute, 2);
-        LCD_ShowNum(2, 4, DisplayHour, 2);
-        LCD_ShowString(2, 11, AlarmOnOff ? "ON " : "OFF");
-    } else if (AlarmFlag == 1) {
-        // 开关闪烁
-        LCD_ShowNum(2, 7, AlarmMinute, 2);
-        LCD_ShowNum(2, 4, DisplayHour, 2);
-        // 简单的闪烁效果
         if (AlarmOnOff) {
             LCD_ShowString(2, 11, "ON ");
         } else {
             LCD_ShowString(2, 11, "OFF");
         }
     }
+    else if (AlarmFlag == 2) {
+        // 分钟闪烁 (位置 2,7)
+        BlinkField(2, 7, AlarmMinute, 2);
+        // 非闪烁部分强制显示
+        LCD_ShowNum(2, 4, DisplayHour, 2);
+        if (AlarmOnOff) {
+            LCD_ShowString(2, 11, "ON ");
+        } else {
+            LCD_ShowString(2, 11, "OFF");
+        }
+    }
+    else if (AlarmFlag == 1) {
+        // --- 4. 显示开关状态 (位置 2,11) ---
+        if (AlarmOnOff) {
+            LCD_ShowNum(2, 7, AlarmMinute, 2);
+            LCD_ShowNum(2, 4, DisplayHour, 2);
+            LCD_ShowString(2, 11, "   ");
+            Delay(400);
+            LCD_ShowString(2, 11, "ON ");
+            Delay(400);
+        } else {
+            LCD_ShowNum(2, 7, AlarmMinute, 2);
+            LCD_ShowNum(2, 4, DisplayHour, 2);
+            LCD_ShowString(2, 11, "   ");
+            Delay(400);
+            LCD_ShowString(2, 11, "OFF");
+            Delay(400);
+        }
+    }
+
+
 }
 
-/**
- * @brief 主界面显示函数
- * 显示实时运行的时间和日期
- */
 void Main_ShowData(void) {
     LCD_ShowString(2, 1, "Main");
 
-    // 计算显示小时
+    // 主界面同样需要根据 flag 计算显示小时
     unsigned int DisplayHour;
     if (TimeHour_flag == 0) {
         DisplayHour = RealHour;
@@ -235,7 +231,6 @@ void Main_ShowData(void) {
         else DisplayHour = RealHour;
     }
 
-    // 显示时间日期数据
     LCD_ShowNum(2, 15, TimeSec, 2);
     LCD_ShowChar(2, 14, ':');
     LCD_ShowNum(2, 12, TimeMinute, 2);
@@ -248,10 +243,7 @@ void Main_ShowData(void) {
     LCD_ShowNum(1, 1, TimeYear, 4);
 }
 
-/**
- * @brief 通用闪烁函数
- * 控制光标所在字段的闪烁显示
- */
+// 通用闪烁函数
 void BlinkField(unsigned char row, unsigned char col, unsigned int value, unsigned char digits) {
     static unsigned char blink_state = 0;
     if (TimeCount % 4 == 0) {
@@ -266,10 +258,7 @@ void BlinkField(unsigned char row, unsigned char col, unsigned int value, unsign
     }
 }
 
-/**
- * @brief 时间进位计算 (万年历核心逻辑)
- * 处理秒、分、时、日的进位及闰年判断
- */
+// --- 时间核心逻辑 ---
 void Calendar(void) {
     // 秒进位
     if (TimeSec >= 60) {
@@ -279,14 +268,15 @@ void Calendar(void) {
     // 分进位
     if (TimeMinute >= 60) {
         TimeMinute = 0;
-        RealHour++;
+        RealHour++; // 操作底层24小时制
     }
     // 时进位 (底层逻辑永远是 0-23)
     if (RealHour >= 24) {
         RealHour = 0;
         TimeDay++;
     }
-    // 日期进位逻辑
+
+    // 日期进位逻辑 (月份/年份)
     unsigned char maxDay = GetDaysInMonth(TimeYear, TimeMonth);
     if (TimeDay > maxDay) {
         TimeDay = 1;
@@ -298,17 +288,11 @@ void Calendar(void) {
     }
 }
 
-/**
- * @brief 获取月份天数
- * 根据年份和月份计算当月最大天数（含闰年判断）
- */
+// 获取月份天数
 unsigned char GetDaysInMonth(unsigned int year, unsigned char month) {
     if (month == 2) {
-        // 闰年判断
-        if ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0))
-            return 29;
-        else
-            return 28;
+        if ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)) return 29;
+        else return 28;
     } else if (month == 4 || month == 6 || month == 9 || month == 11) {
         return 30;
     } else {
@@ -316,10 +300,7 @@ unsigned char GetDaysInMonth(unsigned int year, unsigned char month) {
     }
 }
 
-/**
- * @brief 按键逻辑处理函数
- * 根据 KeyValue 和当前界面执行相应操作
- */
+// --- 按键逻辑 ---
 void KeyLogic(int key) {
     switch (key) {
         // 确认键 (切换界面)
@@ -334,11 +315,8 @@ void KeyLogic(int key) {
                 Menu_flag = 0;   // 返回主界面
             }
             break;
-
-        // 闹钟/返回键
         case 2:
-            if (AlarmTriggered == 0) {
-                // 未响铃时切换界面
+            if (AlarmTriggered==0) {
                 if (Menu_flag == 0) {
                     LCD_Clear();
                     Menu_flag = 2;
@@ -346,114 +324,133 @@ void KeyLogic(int key) {
                     LCD_Clear();
                     Menu_flag = 0;
                 }
-            } else {
-                // 闹钟响铃时关闭闹钟
-                AlarmTriggered = 0;
-                buzzer(0);
+                break;
+            }else if (AlarmTriggered == 1) {
+                AlarmTriggered = 0; // 关闭闹钟触发状态
+                buzzer(0); // 关闭蜂鸣器
+                break;
             }
             break;
-
-        // 切换时制键 (12/24)
+        // 切换时制键
         case 3:
+            // 直接切换标志位
             TimeHour_flag = !TimeHour_flag;
+            // 注意：不需要调用 Calendar()，也不需要修改 RealHour
+            // 下次显示时，会自动根据新的 flag 进行转换
             break;
 
         // 加键
         case 4:
-            if (Menu_flag == 1) {
-                // 设置界面加操作
+            if (Menu_flag==1) {
                 switch (AlterFlag) {
                     case 1: if (++AlterSec > 59) AlterSec = 0; break;
                     case 2: if (++AlterMinute > 59) AlterMinute = 0; break;
+
+                        // --- 修改 AlterRealHour，保持底层数据纯净 ---
                     case 3: if (++AlterRealHour > 23) AlterRealHour = 0; break;
+
                     case 4:
-                        if (++AlterDay > GetDaysInMonth(AlterYear, AlterMonth))
+                        if (++AlterDay > GetDaysInMonth(AlterYear, AlterMonth)) {
                             AlterDay = 1;
+                        }
                         break;
+
                     case 5:
                         if (++AlterMonth > 12) AlterMonth = 1;
-                        // 修正日期防止非法值
+
+                        // --- 核心修复：防止 31号 加到 4月/6月 导致死循环 ---
                         unsigned char maxDay = GetDaysInMonth(AlterYear, AlterMonth);
-                        if (AlterDay > maxDay) AlterDay = maxDay;
+                        if (AlterDay > maxDay) {
+                            AlterDay = maxDay; // 自动修正为该月最大天数
+                        }
                         break;
+
                     case 6: if (++AlterYear > 9999) AlterYear = 1900; break;
                 }
-            } else if (Menu_flag == 2) {
-                // 闹钟界面加操作
+                break;
+            }
+            if (Menu_flag == 2){
                 switch (AlarmFlag) {
                     case 2: if (++AlarmMinute > 59) AlarmMinute = 0; break;
                     case 3: if (++AlarmHour > 23) AlarmHour = 0; break;
-                    case 1: AlarmOnOff = !AlarmOnOff; break;
+                    case 1: if (AlarmOnOff == 1 ){AlarmOnOff = 0;break;}
+                            else {AlarmOnOff = 1;break;}
                 }
             }
             break;
-
-        // 减键
         case 7:
-            if (Menu_flag == 1) {
-                // 设置界面减操作
+            if (Menu_flag==1) {
                 switch (AlterFlag) {
                     case 1: if (AlterSec-- == 0) AlterSec = 59; break;
                     case 2: if (AlterMinute-- == 0) AlterMinute = 59; break;
-                    case 3: if (AlterRealHour-- == 0) AlterRealHour = 23; break;
+                    case 3:
+                        if (AlterRealHour-- == 0) AlterRealHour = 23;
+                        break;
                     case 4:
-                        if (AlterDay-- == 1)
-                            AlterDay = GetDaysInMonth(AlterYear, AlterMonth);
+                        if (AlterDay-- == 1) AlterDay = GetDaysInMonth(AlterYear, AlterMonth);
                         break;
                     case 5:
                         if (AlterMonth == 1) AlterMonth = 12;
                         else AlterMonth--;
-                        // 修正日期防止非法值
+
+                        // --- 同样进行日期修正 ---
                         unsigned char maxDay = GetDaysInMonth(AlterYear, AlterMonth);
-                        if (AlterDay > maxDay) AlterDay = maxDay;
+                        if (AlterDay > maxDay) {
+                            AlterDay = maxDay;
+                        }
                         break;
                     case 6: if (AlterYear-- == 1900) AlterYear = 9999; break;
                 }
-            } else if (Menu_flag == 2) {
-                // 闹钟界面减操作
+                break;
+            }
+            if (Menu_flag == 2){
                 switch (AlarmFlag) {
                     case 2:
+                        // 分钟减1：到0时回绕到59
                         if (AlarmMinute == 0) AlarmMinute = 59;
                         else AlarmMinute--;
                         break;
                     case 3:
+                        // 小时减1：到0时回绕到23
                         if (AlarmHour == 0) AlarmHour = 23;
                         else AlarmHour--;
                         break;
-                    case 1: AlarmOnOff = !AlarmOnOff; break;
+                    case 1: if (AlarmOnOff == 1 ){AlarmOnOff = 0;break;}
+                            else {AlarmOnOff = 1;break;}
                 }
             }
             break;
-
-        // 光标右移
-        case 5:
+        // 光标移动
+        case 5: // 右移
             if (Menu_flag == 1) {
                 AlterFlag++;
                 if (AlterFlag > 6) AlterFlag = 1;
-            } else if (Menu_flag == 2) {
-                AlarmFlag++;
+                break;
+            }
+            if (Menu_flag == 2) {
+                AlarmFlag++; // 正确：右移+1
                 if (AlarmFlag > 3) AlarmFlag = 1;
+                break;
             }
             break;
 
-        // 光标左移
-        case 6:
+        case 6: // 左移
             if (Menu_flag == 1) {
                 AlterFlag--;
                 if (AlterFlag < 1) AlterFlag = 6;
-            } else if (Menu_flag == 2) {
+                break;
+            }
+            if (Menu_flag == 2) {
                 AlarmFlag--;
                 if (AlarmFlag < 1) AlarmFlag = 3;
+                break;
             }
             break;
     }
     KeyValue = 0;
 }
 
-/**
- * @brief 定时器0初始化
- * 配置定时器0为16位定时器模式
- */
+// --- 硬件初始化与中断 ---
 void Timer0Init(void) {
     TMOD &= 0xF0;
     TMOD |= 0x01;
@@ -465,16 +462,9 @@ void Timer0Init(void) {
     EA = 1;
 }
 
-/**
- * @brief 定时器0中断服务函数
- * 提供时间基准 (1ms中断一次)
- */
 void Timer0_Rountine(void) __interrupt (1) {
-    // 重装初值 (64535对应1ms @11.0592MHz)
     TH0 = 64535 / 256;
     TL0 = 64535 % 256 + 1;
-
-    // 计数达到100次(100ms)增加1秒
     TimeCount++;
     if(TimeCount >= 100) {
         TimeSec++;
@@ -482,10 +472,6 @@ void Timer0_Rountine(void) __interrupt (1) {
     }
 }
 
-/**
- * @brief 蜂鸣器控制函数
- * @param state 1开启, 0关闭
- */
 void buzzer(int state) {
     if(state) P2_3 = 1;
     else P2_3 = 0;
