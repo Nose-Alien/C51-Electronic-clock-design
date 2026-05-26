@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "mcs51/8052.h"
 #include "../include/Delay.h"
 #include "../include/LCD1602.h"
@@ -56,8 +57,9 @@ void BlinkField(unsigned char row, unsigned char col, unsigned int value, unsign
 void AlarmState(void); // 闹钟状态检测与触发函数
 void ShowWeekday(unsigned int year, unsigned char month, unsigned char day);
 unsigned char GetWeekday(unsigned int year, unsigned char month, unsigned char day);
+void InitUART(void);
 
-
+void Uartsend(unsigned char byte);
 // --- 中断函数声明 ---
 static void Timer0_Rountine(void) __interrupt (1);
 
@@ -66,7 +68,11 @@ int main(void) {
     buzzer(0);        // 初始化蜂鸣器，确保上电时处于关闭状态
     LCD_Init();       // 初始化LCD1602液晶显示屏
     Timer0Init();     // 初始化定时器0，启动系统时基（用于计时和闪烁）
+    InitUART();
+    Uartsend('1');
+
     while(1) {        // 进入无限主循环
+
         KeyValue = GetKey();  // 扫描矩阵键盘，获取当前按下的键值
         AlarmState();         // 实时检测闹钟状态（判断是否到达设定时间并触发蜂鸣器）
         KeyLogic(KeyValue);   // 将获取到的键值传入逻辑处理函数，执行相应操作
@@ -534,6 +540,49 @@ void Timer0Init(void) {
     ET0 = 1;            // 开启定时器0中断允许
     EA = 1;             // 开启全局中断总开关
 }
+
+
+// void InitUART(void)
+// {
+//     // --- 修复冲突的关键修改 ---
+//     // TMOD 低4位控制 Timer0，高4位控制 Timer1
+//     // 我们只修改高4位 (0x20 = 0010 0000)，保留低4位不变
+//     TMOD = (TMOD & 0x0F) | 0x20;
+//     // -------------------------
+//
+//     TH1 = 0xFD;      // 波特率9600 (晶振11.0592MHz)
+//     TL1 = 0xFD;      // 这里直接赋值0xFD，不要写 TL1 = TH1，因为TH1是变量，编译后可能不安全
+//     TR1 = 1;         // 启动定时器1
+//     SCON = 0x50;     // 串口模式1，允许接收
+//     PCON = 0x00;     // 波特率不加倍
+//     ES = 1;          // 开启串口中断
+//     EA = 1;          // 开启总中断
+// }
+
+
+void InitUART(void)		//9600bps@11.0592MHz
+{
+    PCON &= 0x7F;		//波特率不倍速
+    SCON = 0x40;		//8位数据,可变波特率
+    TMOD &= 0x0F;		//清除定时器1模式位
+    TMOD |= 0x20;		//设定定时器1为8位自动重装方式
+    TL1 = 0xFD;			//设定定时初值
+    TH1 = 0xFD;			//设定定时器重装值
+    TR1 = 1;			//启动定时器1
+    ET1 = 0;        	//禁止定时器1中断
+}
+
+
+//串口发送一个字节数据
+
+void Uartsend(unsigned char byte)//发送
+{
+    SBUF=byte;//把数据写入发送缓冲区SBUF
+    //数据发送完成的标志是TI=1；所以等待数据传送完
+    while(TI==0);
+    TI=0;//软件清零
+}
+
 // 定时器0的中断服务函数（__interrupt (1) 表示这是定时器0的中断入口）
 void Timer0_Rountine(void) __interrupt (1)
 {
@@ -553,6 +602,17 @@ void Timer0_Rountine(void) __interrupt (1)
     }
 }
 
+void UART_Routine(void)__interrupt (4)
+{
+    if(RI)
+    {
+        RI = 0;
+        //add your code here!
+    }
+    else
+        TI = 0;
+
+}
 // 蜂鸣器控制函数
 void buzzer(int state) {
     if(state) P2_3 = 1;          // 如果传入的 state 为非0（真），则将P2.3引脚置高电平，驱动蜂鸣器响
