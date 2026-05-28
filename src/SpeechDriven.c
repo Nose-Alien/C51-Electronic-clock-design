@@ -30,20 +30,13 @@ void SendBeijingTime(unsigned int hour)
     Uartsend('[');
 
     // 2. 发送 "现在是北京时间" (7个汉字 → 14字节 GBK)
-    Uartsend(0xCF);
-    Uartsend(0xD6); // 现
-    Uartsend(0xD4);
-    Uartsend(0xDA); // 在
-    Uartsend(0xCA);
-    Uartsend(0xC7); // 是
-    Uartsend(0xB1);
-    Uartsend(0xB1); // 北
-    Uartsend(0xBE);
-    Uartsend(0xA9); // 京
-    Uartsend(0xCA);
-    Uartsend(0xB1); // 时
-    Uartsend(0xBC);
-    Uartsend(0xE4); // 间
+    Uartsend(0xCF);Uartsend(0xD6); // 现
+    Uartsend(0xD4);Uartsend(0xDA); // 在
+    Uartsend(0xCA);Uartsend(0xC7); // 是
+    Uartsend(0xB1);Uartsend(0xB1); // 北
+    Uartsend(0xBE);Uartsend(0xA9); // 京
+    Uartsend(0xCA);Uartsend(0xB1); // 时
+    Uartsend(0xBC);Uartsend(0xE4); // 间
 
     // 3. 动态发送小时数字 (0-23)
     if (hour >= 10) {
@@ -54,10 +47,8 @@ void SendBeijingTime(unsigned int hour)
     }
 
     // 4. 发送 "点整" (2个汉字 → 4字节 GBK)
-    Uartsend(0xB5);
-    Uartsend(0xE3); // 点
-    Uartsend(0xD5);
-    Uartsend(0xFB); // 整
+    Uartsend(0xB5);Uartsend(0xE3); // 点
+    Uartsend(0xD5);Uartsend(0xFB); // 整
 
     // 5. 发送 ]
     Uartsend(']');

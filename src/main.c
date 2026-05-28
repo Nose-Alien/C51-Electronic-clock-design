@@ -94,7 +94,7 @@ int main(void)
         }
     }
 }
-
+//闹钟状态
 void AlarmState(void)
 {
     if (AlarmOnOff) {
