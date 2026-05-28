@@ -7,9 +7,9 @@
 
 // --- 全局变量定义 ---
 int KeyValue = 0; // 存储读取到的按键值
-
+volatile unsigned char keyScanReady = 0;
 // 系统计时与状态
-static unsigned int TimeCount = 0; // 10ms计数器 (用于产生1秒基准)
+static unsigned int TimeCount = 0; // 1ms计数器 (用于产生1秒基准)
 
 // 核心时间数据 (底层逻辑)
 static unsigned int TimeSec = 0; // 当前秒 (0-59)
@@ -73,6 +73,10 @@ int main(void)
 
     while (1) {
         // 进入无限主循环
+        // if (keyScanReady) {
+        //     keyScanReady = 0;
+        //     KeyValue = GetKey();   // 在这里调用，即使延时也不影响中断
+        // }
         KeyValue = GetKey(); // 扫描矩阵键盘，获取当前按下的键值
         AlarmState(); // 实时检测闹钟状态（判断是否到达设定时间并触发蜂鸣器）
         KeyLogic(KeyValue); // 将获取到的键值传入逻辑处理函数，执行相应操作
@@ -289,7 +293,7 @@ void Main_ShowData(void)
         }
     }
     ShowWeekday(TimeYear, TimeMonth, TimeDay);
-    On_Time_Alarm(TimeHour_flag,RealHour, TimeMinute,TimeSec);
+    TelTime(TimeHour_flag, RealHour, TimeMinute, TimeSec); //整点报时
 
     LCD_ShowNum(2, 15, TimeSec, 2); // 在第2行第15列显示秒 (2位数)
     LCD_ShowChar(2, 14, ':'); // 在第2行第14列显示秒与分之间的冒号
@@ -303,7 +307,6 @@ void Main_ShowData(void)
     LCD_ShowNum(1, 6, TimeMonth, 2); // 在第1行第6列显示月 (2位数)
     LCD_ShowChar(1, 5, '-'); // 在第1行第5列显示月与年之间的横杠
     LCD_ShowNum(1, 1, TimeYear, 4); // 在第1行第1列显示年 (4位数)
-
 }
 
 // 计算星期几（基姆拉尔森公式）
@@ -636,7 +639,7 @@ void Timer0_Rountine(void) __interrupt(1)
         // keyScanReady = 1;     // （被注释掉的代码）原本用于标记可以进行按键扫描
     }
 
-    if (TimeCount >= 100) {
+    if (TimeCount >= 1000) { //1=1ms
         TimeSec++; // 系统的秒数变量加1
         TimeCount = 0; // 计数变量清零，开始下一秒的重新计数
     }

@@ -14,7 +14,7 @@ void InitUART(void) //9600bps@11.0592MHz
     ET1 = 0; //禁止定时器1中断
 }
 
-void On_Time_Alarm(unsigned int Hour_flag,unsigned int hour, unsigned int minute, unsigned int sec)
+void TelTime(unsigned int Hour_flag,unsigned int hour, unsigned int minute, unsigned int sec)//整点报时
 {
     if (minute == 0 && sec == 0 && (hour >=8 && hour <= 22)&&Hour_flag==0) {
         SendBeijingTime(hour);
