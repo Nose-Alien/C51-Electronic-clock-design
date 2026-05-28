@@ -1,2 +1,6 @@
-.pio
+.pio/*
+!.pio/build/
+.pio/build/*
+!.pio/build/STC89C52RC/
+.pio/build/STC89C52RC/*
 !.pio/build/STC89C52RC/firmware.hex
